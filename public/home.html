@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timesheet App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Existing styles... */
+        .nav-tabs .nav-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+        /* Profile Section Styles */
+    .profile-heading {
+        font-size: 2em;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .profile-details {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+    }
+
+    .profile-details p {
+        font-size: 1.1em;
+        margin: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .profile-details .profile-value {
+        font-weight: 300;
+        color: #555;
+        font-style: italic;
+    }
+
+    .btn.edit-btn {
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 1em;
+        border-radius: 5px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn.edit-btn:hover {
+        background-color: #0056b3;
+    }
+
+    /* Input Fields for Editing (optional) */
+    .profile-details input {
+        width: 70%;
+        padding: 8px;
+        font-size: 1em;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        margin-left: 10px;
+    }
+        /* Style for the monthly timesheet table cells */
+        .monthly-timesheet-cell {
+            border: 1px solid #ccc; 
+            padding: 8px; 
+            text-align: center; 
+        }
+
+        /* Style for the day header cells */
+        .monthly-timesheet-cell.day-header {
+            background-color: #f0f0f0; 
+            font-weight: bold; 
+        }
+
+        .user-entry-details {
+            display: none;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .form-group label {
+            display: block; 
+            margin-bottom: 5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc; 
+            border-radius: 4px;
+            box-sizing: border-box; 
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">Timesheet App</a>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <span class="nav-link user-info" id="username"></span>
+                </li>
+                <li class="nav-item">
+                    <button class="btn btn-danger logout-btn" onclick="logout()">Logout</button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profileSection" type="button" role="tab" aria-controls="profileSection" aria-selected="true">Profile</button>
+            </li>
+            <li class="nav-item" role="presentation" id="timesheetTabLi">
+                <button class="nav-link" id="timesheet-tab" data-bs-toggle="tab" data-bs-target="#timesheetSection" type="button" role="tab" aria-controls="timesheetSection" aria-selected="false">Timesheet</button>
+            </li>
+            <li class="nav-item" role="presentation" id="userTimesheetTabLi">
+                <button class="nav-link" id="user-timesheet-tab" data-bs-toggle="tab" data-bs-target="#userTimesheetSection" type="button" role="tab" aria-controls="userTimesheetSection" aria-selected="false">User Timesheet Entries</button>
+            </li>
+            <li class="nav-item" role="presentation" id="adminTabLi" style="display: none;">
+                <button class="nav-link" id="admin-tab" data-bs-toggle="tab" data-bs-target="#adminSection" type="button" role="tab" aria-controls="adminSection" aria-selected="false">Admin</button>
+            </li>
+            <li class="nav-item" role="presentation" id="adminTimesheetTabLi" style="display: none;">
+                <button class="nav-link" id="adminTimesheet-tab" data-bs-toggle="tab" data-bs-target="#adminTimesheetSection" type="button" role="tab" aria-controls="adminTimesheetSection" aria-selected="false">Admin Timesheet</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="myTabContent">
+            <!-- Profile Section -->
+<div class="tab-pane fade show active" id="profileSection" role="tabpanel" aria-labelledby="profile-tab">
+    <h2 class="profile-heading">Profile</h2>
+    <dl class="profile-details" id="profile-details"></dl>
+    <button class="btn btn-primary edit-btn" onclick="toggleProfileEditing()">Edit</button>
+</div>
+
+            <!-- Timesheet Submission Section -->
+            <div class="tab-pane fade" id="timesheetSection" role="tabpanel" aria-labelledby="timesheet-tab">
+                <h2>Submit Timesheet</h2>
+                <form id="timesheetForm">
+                    <div class="form-group">
+                        <label for="project">Project:</label>
+                        <input type="text" class="form-control" id="project" name="project" value="CCG" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="timesheetDate">Date:</label>
+                        <input type="date" class="form-control" id="timesheetDate" name="timesheetDate" required min="<?php echo date('Y-m-d', strtotime('first day of this month')); ?>" max="<?php echo date('Y-m-d', strtotime('last day of this month')); ?>"> 
+                    </div>
+                    <div class="form-group">
+                        <label for="startTime">Start Time:</label>
+                        <input type="time" class="form-control" id="startTime" name="startTime" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="endTime">End Time:</label>
+                        <input type="time" class="form-control" id="endTime" name="endTime" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="breakTime">Break Time (in hours):</label>
+                        <input type="number" class="form-control" id="breakTime" name="breakTime" min="0" value="0" step="0.25">
+                    </div>
+                    <div class="form-group">
+                        <label for="extraHoursReason">Reason for Extra Hours (if any):</label>
+                        <textarea class="form-control" id="extraHoursReason" name="extraHoursReason"></textarea>
+                    </div>
+                    <button type="button" class="btn btn-primary mt-2" onclick="submitTimesheet()">Submit</button>
+                </form>
+            </div>
+
+            <!-- User Timesheet Entries Section -->
+            <div class="tab-pane fade" id="userTimesheetSection" role="tabpanel" aria-labelledby="user-timesheet-tab">
+                <h2>User Timesheet Entries</h2>
+                <div class="row">
+                    <div class="form-group col-md-6">
+                        <label for="userTimesheetYearSelect">Financial Year:</label>
+                        <select class="form-control" id="userTimesheetYearSelect" onchange="fetchUserTimesheetEntries()">
+                            <option value="">Select Financial Year</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="entryMonthSelect">Month:</label>
+                        <select class="form-control" id="entryMonthSelect" onchange="fetchUserTimesheetEntries()">
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+							<option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                </div>
+                <table id="userTimesheetTable" class="table mt-3">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Break Time (hours)</th>
+                            <th>Total Hours</th>
+                            <th>Project</th>
+                            <th>Reason for Extra Hours</th>
+                            <th>Year</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Timesheet entries will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- Admin Section -->
+            <div class="tab-pane fade" id="adminSection" role="tabpanel" aria-labelledby="admin-tab">
+                <h2>Admin</h2>
+                <ul class="nav nav-tabs" id="adminTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="userManagement-tab" data-bs-toggle="tab" data-bs-target="#userManagement" type="button" role="tab" aria-controls="userManagement" aria-selected="true">User Management</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="addUser-tab" data-bs-toggle="tab" data-bs-target="#addUser" type="button" role="tab" aria-controls="addUser" aria-selected="false">Add User</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="adminTabContent">
+                    <!-- User Management Sub-tab -->
+<div class="tab-pane fade show active" id="userManagement" role="tabpanel" aria-labelledby="userManagement-tab">
+    <div id="usersList" class="mb-3">
+        <label for="userEmailSelect">Select User:</label>
+        <select class="form-control" id="userEmailSelect"></select>
+        <button type="button" class="btn btn-primary mt-2" onclick="showUserDetails()">View Details</button>
+    </div>
+
+    <div id="userDetails" style="display: none;">
+        <h3 id="selectedUserName"></h3>
+        <form id="userForm">
+            <input type="hidden" id="userId">
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userName" name="Name" class="form-control" readonly>
+                        <label for="userName">Name</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userSurname" name="Surname" class="form-control" readonly>
+                        <label for="userSurname">Surname</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userRole" name="Role" class="form-control" readonly>
+                        <label for="userRole">Role</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userMail" name="Mail" class="form-control" readonly>
+                        <label for="userMail">Email</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userTelephoneCode" name="Telephone_Code" class="form-control" readonly>
+                        <label for="userTelephoneCode">Telephone Code</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userMobileNumber" name="Mobile_Number" class="form-control" readonly>
+                        <label for="userMobileNumber">Mobile Number</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userAlternateEmailAddress" name="Alternate_Email_Address" class="form-control" readonly>
+                        <label for="userAlternateEmailAddress">Alternate Email Address</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userCompanyName" name="Company_Name" class="form-control" readonly>
+                        <label for="userCompanyName">Company Name</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userOfficeLocation" name="Office_Location" class="form-control" readonly>
+                        <label for="userOfficeLocation">Office Location</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userDepartment" name="Department" class="form-control" readonly>
+                        <label for="userDepartment">Department</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userAccountStatus" name="Account_Status" class="form-control" readonly>
+                        <label for="userAccountStatus">Account Status</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userModifiedBy" name="ModifiedBy" class="form-control" readonly>
+                        <label for="userModifiedBy">Last Modified By</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" id="userModifiedDate" name="ModifiedDate" class="form-control" readonly>
+                        <label for="userModifiedDate">Last Modified Date</label>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" id="editButton" class="btn btn-primary mt-3" onclick="editUserDetails()">Edit</button>
+            <button type="button" id="saveButton" class="btn btn-success mt-3" onclick="saveUserDetails()">Save</button>
+        </form>
+    </div>
+</div>
+
+                    <!-- Add User Sub-tab -->
+<div class="tab-pane fade" id="addUser" role="tabpanel" aria-labelledby="addUser-tab">
+    <h3>Add User</h3>
+    <form id="addUserForm">
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="text" id="addUserName" name="Name" class="form-control" required>
+                    <label for="addUserName">Name</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="text" id="addUserSurname" name="Surname" class="form-control" required>
+                    <label for="addUserSurname">Surname</label>
+                </div>
+            </div>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="text" id="addUserRole" name="Role" class="form-control" required>
+                    <label for="addUserRole">Role</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="email" id="addUserMail" name="Mail" class="form-control" required>
+                    <label for="addUserMail">Email</label>
+                </div>
+            </div>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="text" id="addUserTelephoneCode" name="Telephone_Code" class="form-control" required>
+                    <label for="addUserTelephoneCode">Telephone Code</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="text" id="addUserMobileNumber" name="Mobile_Number" class="form-control" required>
+                    <label for="addUserMobileNumber">Mobile Number</label>
+                </div>
+            </div>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="email" id="addUserAlternateEmailAddress" name="Alternate_Email_Address" class="form-control" required>
+                    <label for="addUserAlternateEmailAddress">Alternate Email Address</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="text" id="addUserCompanyName" name="Company_Name" class="form-control" required>
+                    <label for="addUserCompanyName">Company Name</label>
+                </div>
+            </div>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="text" id="addUserOfficeLocation" name="Office_Location" class="form-control" required>
+                    <label for="addUserOfficeLocation">Office Location</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="text" id="addUserDepartment" name="Department" class="form-control" required>
+                    <label for="addUserDepartment">Department</label>
+                </div>
+            </div>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <select id="addUserAccountStatus" name="Account_Status" class="form-select">
+                        <option value="true">True</option>
+                        <option value="false">False</option>
+                    </select>
+                    <label for="addUserAccountStatus">Account Status</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <input type="text" id="addUserEmployeeID" name="Employee_ID" class="form-control" required>
+                    <label for="addUserEmployeeID">Employee ID</label>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-primary mt-3" onclick="addNewUser()">Create User</button>
+    </form>
+</div>
+
+
+            <div class="tab-pane fade" id="adminTimesheetSection" role="tabpanel" aria-labelledby="adminTimesheet-tab">
+                <h2>Admin Timesheet</h2>
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="adminYearSelect">Financial Year:</label>
+                        <select class="form-control" id="adminYearSelect" onchange="updateMonthDropdown(); fetchAdminTimesheetEntries();">
+                            <!-- Options populated by JavaScript -->
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="adminMonthSelect">Month:</label>
+                        <select class="form-control" id="adminMonthSelect" onchange="fetchAdminTimesheetEntries();">
+                            <!-- Options populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="adminUserSelect">Select User:</label>
+                        <select class="form-control" id="adminUserSelect" onchange="fetchAdminTimesheetEntries();">
+                            <option value="">All Users</option>
+                            <!-- Options populated by JavaScript -->
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-success" id="exportToExcelBtn" onclick="exportToExcel()" style="margin-top: 30px;">Export to Excel</button>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="fetchAdminTimesheetEntries()">Show All</button>
+                    <button type="button" class="btn btn-warning btn-sm" onclick="showNotEnteredTimesheetUsers()">Not Entered</button>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="showLessThanEightHours()">Less Than 8 Hours</button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="showMoreThanEightHours()">More Than 8 Hours</button>
+                </div>
+
+                <div class="tab-content" id="adminTimesheetViewTabContent">
+                    <div class="tab-pane fade show active" id="allUsersView" role="tabpanel" aria-labelledby="allUsersView-tab">
+                        <table id="adminTimesheetTable" class="table mt-3">
+                            <thead>
+                                <tr>
+                                    <th>User Email</th>
+                                    <!-- Dynamically populated day columns will go here -->
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="tab-pane fade" id="individualUserView" role="tabpanel" aria-labelledby="individualUserView-tab">
+                        <table id="individualUserTimesheetTable" class="table mt-3">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Start Time</th>
+                                    <th>End Time</th>
+                                    <th>Break Time (hours)</th>
+                                    <th>Total Hours</th>
+                                    <th>Project</th>
+                                    <th>Reason for Extra Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+
+    <div id="userEntryDetails" class="user-entry-details"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let user; 
+
+        document.addEventListener('DOMContentLoaded', function () {
+            fetch('/api/auth/session')
+                .then(response => {
+                    if (!response.ok) {
+                        window.location.href = '/login?error=' + encodeURIComponent('Please login to continue.');
+                        throw new Error('Session expired');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    user = data;
+                    document.getElementById('username').textContent = `Logged in as: ${data.username || 'Guest'}`;
+
+                    if (data.acl === 'Admin') {
+                        // Show admin tabs
+                        document.getElementById('adminTabLi').style.display = 'block';
+                        document.getElementById('adminTimesheetTabLi').style.display = 'block';
+                        // Fetch data for admin views
+                        fetchUsersForAdmin();
+                        fetchFinancialYears();
+                        fetchAdminTimesheetEntries(); 
+                    } else {
+                        // Show user tabs
+                        document.getElementById('timesheetTabLi').style.display = 'block';
+                        document.getElementById('userTimesheetTabLi').style.display = 'block';
+
+                        // Fetch data for user views
+                        fetchProjects();
+                        fetchUserTimesheetEntries();
+                    }
+
+                    // Fetch and display user profile
+                    fetchUserProfile(data.email);
+                    setCurrentDate();
+                })
+                .catch(error => {
+                    console.error('Error fetching user session:', error);
+                });
+        });
+
+        // Function to fetch and display the user profile
+        function fetchUserProfile(email) {
+            fetch(`/api/user/details?email=${email}`)
+                .then(response => response.json())
+                .then(user => {
+                    displayUserProfile(user);
+                })
+                .catch(error => {
+                    console.error("Error fetching user profile:", error);
+                });
+        }
+
+// Function to display the user profile details
+function displayUserProfile(user) {
+    const profileDetails = document.getElementById('profile-details');
+    profileDetails.innerHTML = ''; // Clear existing content
+
+    // Define fields to display in the profile
+    const displayFields = [
+        "Username", "Surname", "Name", "Mail", "Role", "Department", 
+        "Country", "Office_Location", "City", "Postal_Code", 
+        "Telephone_Code", "Mobile_Number", "Alternate_Email_Address", 
+        "Company_Name", "Employee_ID", "ModifiedBy", "ModifiedDate"
+    ];
+
+    // Loop through each field to create and append display elements
+    displayFields.forEach(key => {
+        let value = user[key] || '';
+        
+        // Format ModifiedDate field as a readable string
+        if (key === "ModifiedDate" && value) { 
+            value = new Date(value).toLocaleString(); 
+        }
+
+        // Create and append profile detail element
+        const p = document.createElement('p');
+        p.id = `profile-${key}`; 
+        p.innerHTML = `<strong>${key}:</strong> <span class="profile-value">${value}</span>`;
+        profileDetails.appendChild(p);
+    });
+}
+
+
+// Function to toggle between viewing and editing the profile
+function toggleProfileEditing() {
+    const editableFields = ["Telephone_Code", "Mobile_Number", "Alternate_Email_Address", "City", "Postal_Code"];
+    const editButton = document.querySelector('.edit-btn');
+    const isEditing = editButton.textContent === 'Save';
+
+    if (isEditing) {
+        // Save profile updates
+        saveProfileUpdates(editableFields, editButton);
+    } else {
+        // Switch to edit mode
+        enableProfileEditing(editableFields);
+        editButton.textContent = 'Save';
+    }
+}
+
+// Enable editing by replacing text with input fields
+function enableProfileEditing(editableFields) {
+    editableFields.forEach(field => {
+        const valueSpan = document.querySelector(`#profile-${field} .profile-value`);
+        const currentValue = valueSpan.textContent;
+        valueSpan.innerHTML = `<input type="text" id="edit-${field}" class="form-control" value="${currentValue}">`;
+    });
+}
+
+// Save updated profile information
+function saveProfileUpdates(editableFields, editButton) {
+    const updatedProfile = {};
+
+    // Collect updated values from input fields
+    editableFields.forEach(field => {
+        updatedProfile[field] = document.getElementById(`edit-${field}`).value;
+    });
+
+    // Send the updated profile to the server
+    fetch('/api/user/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedProfile)
+    })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.error || 'Error updating profile');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert('Profile updated successfully!');
+                
+                // Update the displayed profile with new data
+                displayUserProfile({ ...user, ...updatedProfile });
+                editButton.textContent = 'Edit';
+
+                // Update each field with the saved data
+                editableFields.forEach(field => {
+                    const valueSpan = document.querySelector(`#profile-${field} .profile-value`);
+                    valueSpan.innerHTML = updatedProfile[field];
+                });
+            } else {
+                alert('Failed to update profile. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating profile:', error);
+            alert('An error occurred while updating your profile. Please try again later.');
+        });
+}
+
+
+
+        // Logout Function
+        function logout() {
+            fetch('/api/auth/logout')
+                .then(() => {
+                    window.location.href = '/login';
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                });
+        }
+
+        function setCurrentDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = (today.getMonth() + 1).toString().padStart(2, '0');
+            const day = today.getDate().toString().padStart(2, '0');
+            document.getElementById('timesheetDate').value = `${year}-${month}-${day}`;
+        }
+
+        function fetchFinancialYears() {
+            fetch('/api/financial-years')
+                .then(response => response.json())
+                .then(years => {
+                    populateDropdown('userTimesheetYearSelect', years);
+                    populateDropdown('adminYearSelect', years);
+                    updateMonthDropdown();
+                })
+                .catch(error => {
+                    console.error('Error fetching financial years:', error);
+                });
+        }
+
+        function updateMonthDropdown() {
+            const yearSelect = document.getElementById('adminYearSelect');
+            const monthSelect = document.getElementById('adminMonthSelect');
+            const selectedYear = yearSelect.value;
+
+            monthSelect.innerHTML = '';
+
+            if (selectedYear) {
+                const currentYear = new Date().getFullYear();
+                const startMonth = (selectedYear == currentYear) ? new Date().getMonth() + 1 : 1;
+                for (let i = startMonth; i <= 12; i++) {
+                    let option = document.createElement('option');
+                    option.value = i;
+                    option.text = new Date(selectedYear, i - 1).toLocaleString('default', { month: 'long' });
+                    monthSelect.add(option);
+                }
+            }
+        }
+
+        function fetchUserTimesheetEntries() {
+            const year = document.getElementById('userTimesheetYearSelect').value;
+            const month = document.getElementById('entryMonthSelect').value;
+
+            if (!year || !month) {
+                alert('Please select both financial year and month.');
+                return;
+            }
+
+            fetch(`/api/timesheet/entries?year=${year}&month=${month}`)
+                .then(response => response.json())
+                .then(entries => {
+                    displayTimesheetEntries(entries, 'userTimesheetTable');
+                })
+                .catch(error => {
+                    console.error('Error fetching user timesheet entries:', error);
+                });
+        }
+
+        function populateDropdown(dropdownId, options) {
+            const dropdown = document.getElementById(dropdownId);
+            dropdown.innerHTML = '<option value="">Select Option</option>'; 
+            options.forEach(option => {
+                let optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                dropdown.appendChild(optionElement);
+            });
+        }
+
+        function fetchProjects() {
+            fetch('/api/projects')
+                .then(response => response.json())
+                .then(projects => {
+                    const projectDropdown = document.getElementById('project'); 
+                    projectDropdown.innerHTML = '<option value="">Select Project</option>'; 
+
+                    projects.forEach(project => {
+                        project.financialYears.forEach(year => { 
+                            const option = document.createElement('option');
+                            option.value = `${project.name}-${year}`;
+                            option.textContent = `${project.name} (${year})`;
+                            projectDropdown.appendChild(option);
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching projects:', error);
+                });
+        }
+
+        function submitTimesheet() {
+            const timesheetDate = document.getElementById('timesheetDate').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const breakTime = document.getElementById('breakTime').value;
+            const project = document.getElementById('project').value;
+            const extraHoursReason = document.getElementById('extraHoursReason').value;
+
+            if (!timesheetDate || !startTime || !endTime || !project) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            if (startTime >= endTime) {
+                alert('Start time must be before end time.');
+                return;
+            }
+
+            const timesheetData = {
+                timesheetDate,
+                startTime,
+                endTime,
+                breakTime,
+                project,
+                extraHoursReason
+            };
+
+            fetch('/api/timesheet/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(timesheetData)
+            })
+                .then(response => { 
+                    if (!response.ok) {
+                        return response.json().then(errData => {
+                            throw new Error(errData.error || 'Error submitting timesheet'); 
+                        });
+                    }
+                    return response.json();
+                }) 
+                .then(data => {
+                    if (data.success) {
+                        if (data.message === 'Timesheet entry updated!') {
+                            alert('Timesheet entry updated successfully!');
+                        } else {
+                            alert('Timesheet submitted successfully!');
+                        }
+                        document.getElementById('timesheetForm').reset(); 
+                        fetchUserTimesheetEntries(); 
+                    } else {
+                        if (data.message === 'Timesheet submission cancelled.') { 
+                            
+                        } else {
+                            alert('Error submitting timesheet: ' + data.error); 
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error submitting timesheet:', error);
+                    alert('An error occurred while submitting the timesheet. Please try again later.'); 
+                });
+        }
+
+        function displayTimesheetEntries(entries, tableId) {
+            const timesheetTableBody = document.querySelector(`#${tableId} tbody`);
+            timesheetTableBody.innerHTML = ''; 
+            entries.forEach(entry => {
+                let row = timesheetTableBody.insertRow();
+                row.insertCell().textContent = new Date(entry.date).toLocaleDateString(); 
+                row.insertCell().textContent = entry.startTime.slice(0, 5); 
+                row.insertCell().textContent = entry.endTime.slice(0, 5);   
+                row.insertCell().textContent = entry.breakTime;
+                row.insertCell().textContent = entry.workHours.toFixed(2); 
+                row.insertCell().textContent = entry.project; 
+                row.insertCell().textContent = entry.extraHoursReason || '-'; 
+                row.insertCell().textContent = entry.financialYear; 
+            });
+        }
+
+        function fetchUsersForAdmin() {
+            fetch('/api/admin/users')
+                .then(response => response.json())
+                .then(users => {
+                    populateUserSelect(users, 'userEmailSelect');
+                    populateUserSelect(users, 'adminUserSelect');
+                    
+                    // No need for populateTelephoneCodes here
+                })
+                .catch(error => {
+                    console.error('Error fetching users:', error);
+                });
+        }
+
+        function populateUserSelect(users, selectId) {
+            const userSelect = document.getElementById(selectId);
+            users.forEach(user => {
+                let option = document.createElement('option');
+                option.value = user.Mail;
+                option.textContent = user.Mail;
+                userSelect.appendChild(option);
+            });
+        }
+
+        function showUserDetails() {
+            const selectedUserEmail = document.getElementById('userEmailSelect').value;
+            if (!selectedUserEmail) return;
+
+            fetch(`/api/admin/users`)
+                .then(response => response.json())
+                .then(users => {
+                    const selectedUser = users.find(user => user.Mail === selectedUserEmail);
+                    if (selectedUser) {
+                        fetchUserDetails(selectedUser._id);
+                    } else {
+                        console.error('Selected user not found in user list.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching users:', error);
+                });
+        }
+
+        function fetchUserDetails(userId) {
+            fetch(`/api/admin/user/details/${userId}`)
+                .then(response => response.json())
+                .then(user => {
+                    document.getElementById('userId').value = user._id;
+                    document.getElementById('userName').value = user.Name || '';
+                    document.getElementById('userSurname').value = user.Surname || '';
+                    document.getElementById('userRole').value = user.Role || '';
+                    document.getElementById('userTelephoneCode').value = user.Telephone_Code || '';
+                    document.getElementById('userCompanyName').value = user.Company_Name || '';
+                    document.getElementById('userOfficeLocation').value = user.Office_Location || '';
+                    document.getElementById('userDepartment').value = user.Department || '';
+                    document.getElementById('userAccountStatus').value = user.Account_Status ? "True" : "False"; 
+                    document.getElementById('userMail').value = user.Mail || '';
+                    document.getElementById('userMobileNumber').value = user.Mobile_Number || '';
+                    document.getElementById('userAlternateEmailAddress').value = user.Alternate_Email_Address || '';
+                    document.getElementById('userModifiedBy').value = user.ModifiedBy || '';
+                    document.getElementById('userModifiedDate').value = user.ModifiedDate ? new Date(user.ModifiedDate).toLocaleString() : '';
+
+                    document.getElementById('selectedUserName').textContent = user.Name || user.Mail;
+                    document.getElementById('userDetails').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error fetching user details:', error);
+                });
+        }
+
+        function editUserDetails() {
+            const inputFields = document.querySelectorAll('#userForm input[type="text"]');
+            const selectFields = document.querySelectorAll('#userForm select');
+            inputFields.forEach(input => {
+                input.readOnly = false;
+            });
+            selectFields.forEach(select => {
+                select.disabled = false;
+            });
+
+            document.getElementById('editButton').style.display = 'none';
+            document.getElementById('saveButton').style.display = 'inline-block';
+        }
+
+
+        function saveUserDetails() {
+            const userId = document.getElementById('userId').value;
+            const updatedUser = {
+                Name: document.getElementById('userName').value,
+                Surname: document.getElementById('userSurname').value,
+                Role: document.getElementById('userRole').value,
+                Telephone_Code: document.getElementById('userTelephoneCode').value,
+                Company_Name: document.getElementById('userCompanyName').value,
+                Office_Location: document.getElementById('userOfficeLocation').value,
+                Department: document.getElementById('userDepartment').value,
+                Account_Status: document.getElementById('userAccountStatus').value === 'True', 
+                Mail: document.getElementById('userMail').value, 
+                Mobile_Number: document.getElementById('userMobileNumber').value, 
+                Alternate_Email_Address: document.getElementById('userAlternateEmailAddress').value,
+            };
+            fetch(`/api/admin/user/update/${userId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedUser)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('User details updated successfully!');
+                        fetchUsersForAdmin();
+                        showUserDetails();
+                    } else {
+                        alert('Error updating user details: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating user details:', error);
+                    alert('An error occurred while updating user details. Please try again later.');
+                });
+        }
+
+        function addNewUser() {
+            const newUserData = {
+                Name: document.getElementById('addUserName').value,
+                Surname: document.getElementById('addUserSurname').value,
+                Role: document.getElementById('addUserRole').value,
+                Mail: document.getElementById('addUserMail').value,
+                Telephone_Code: document.getElementById('addUserTelephoneCode').value,
+                Mobile_Number: document.getElementById('addUserMobileNumber').value,
+                Alternate_Email_Address: document.getElementById('addUserAlternateEmailAddress').value,
+                Company_Name: document.getElementById('addUserCompanyName').value,
+                Office_Location: document.getElementById('addUserOfficeLocation').value,
+                Department: document.getElementById('addUserDepartment').value,
+                Account_Status: document.getElementById('addUserAccountStatus').value === 'True',
+                Employee_ID: document.getElementById('addUserEmployeeID').value,
+            };
+
+            fetch('/api/admin/users', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(newUserData) 
+            })
+                .then(response => { 
+                    if (!response.ok) { 
+                        return response.json().then(errData => { 
+                            throw new Error(errData.error || 'Error adding user'); 
+                        });
+                    }
+                    return response.json(); 
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert('User added successfully!');
+                        document.getElementById('addUserForm').reset(); 
+                        fetchUsersForAdmin(); 
+                    } else { 
+                        alert('Error adding user: ' + data.error); 
+                    }
+                })
+                .catch(error => { 
+                    console.error('Error adding user:', error);
+                    alert('An error occurred while adding the user. Please try again later.');
+                });
+        }
+
+        function fetchAdminTimesheetEntries() {
+            const year = document.getElementById('adminYearSelect').value;
+            const month = document.getElementById('adminMonthSelect').value;
+            const selectedUser = document.getElementById('adminUserSelect').value;
+
+            let url = `/api/admin/timesheet/entries/monthly?year=${year}&month=${month}`;
+            if (selectedUser) {
+                url += `&userMail=${selectedUser}`;
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(entries => {
+                    if (selectedUser) {
+                        displayAdminIndividualTimesheetEntries(entries);
+                    } else {
+                        displayAdminTimesheetEntries(entries);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching admin timesheet entries:', error);
+                });
+        }
+
+        function displayAdminTimesheetEntries(entries) {
+            const timesheetTable = document.getElementById('adminTimesheetTable');
+            const timesheetTableBody = timesheetTable.querySelector('tbody');
+            const timesheetTableHead = timesheetTable.querySelector('thead');
+            timesheetTableBody.innerHTML = '';
+
+            const dayHeaderRow = timesheetTableHead.querySelector('tr');
+            while (dayHeaderRow.cells.length > 1) {
+                dayHeaderRow.deleteCell(1);
+            }
+
+            const selectedMonth = parseInt(document.getElementById('adminMonthSelect').value);
+            const selectedYear = parseInt(document.getElementById('adminYearSelect').value);
+
+            const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                let dayHeaderCell = document.createElement('th');
+                dayHeaderCell.className = 'monthly-timesheet-cell day-header';
+                dayHeaderCell.textContent = `${day}`;
+                dayHeaderRow.appendChild(dayHeaderCell);
+            }
+
+            const userEntries = {};
+
+            entries.forEach(entry => {
+                userEntries[entry.userEmail] = entry.days;
+            });
+
+            for (const userEmail in userEntries) {
+                const userDays = userEntries[userEmail];
+                let row = timesheetTableBody.insertRow();
+                let userEmailCell = row.insertCell();
+                userEmailCell.textContent = userEmail;
+
+                for (let day = 1; day <= daysInMonth; day++) {
+                    let dayCell = row.insertCell();
+                    dayCell.classList.add('monthly-timesheet-cell');
+                    const dayEntry = userDays.find(entry => entry.day === day);
+
+                    if (dayEntry) {
+                        dayCell.textContent = dayEntry.totalHours.toFixed(2);
+                        dayCell.addEventListener('click', () => {
+                            showUserEntryDetails(userEmail, dayEntry);
+                        });
+                    } else {
+                        dayCell.textContent = '-';
+                    }
+                }
+            }
+        }
+
+        function showUserEntryDetails(userEmail, dayEntry) {
+            const detailsDiv = document.getElementById('userEntryDetails');
+            detailsDiv.innerHTML = `<h3>Entries for ${userEmail} on ${dayEntry.day}</h3>`;
+
+            if (dayEntry.details.length === 0) {
+                detailsDiv.innerHTML += '<p>No entries found for this day.</p>';
+            } else {
+                const detailsTable = document.createElement('table');
+                detailsTable.classList.add('table', 'table-bordered');
+                detailsTable.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Break Time (hours)</th>
+                            <th>Total Hours</th>
+                            <th>Project</th>
+                            <th>Reason for Extra Hours</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                `;
+                const detailsTableBody = detailsTable.querySelector('tbody');
+                dayEntry.details.forEach(detail => {
+                    const detailRow = detailsTableBody.insertRow();
+                    detailRow.insertCell().textContent = detail.date;
+                    detailRow.insertCell().textContent = detail.startTime;
+                    detailRow.insertCell().textContent = detail.endTime;
+                    detailRow.insertCell().textContent = detail.breakTime;
+                    detailRow.insertCell().textContent = detail.workHours.toFixed(2);
+                    detailRow.insertCell().textContent = detail.project;
+                    detailRow.insertCell().textContent = detail.extraHoursReason || '-';
+                });
+
+                detailsDiv.appendChild(detailsTable);
+            }
+
+            detailsDiv.style.display = 'block';
+        }
+
+        function displayAdminIndividualTimesheetEntries(entries) {
+            const tableBody = document.querySelector('#individualUserTimesheetTable tbody');
+            tableBody.innerHTML = '';
+
+            if (entries.length === 0) {
+                const row = tableBody.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 7;
+                cell.textContent = 'No timesheet entries found for this user and period.';
+                return;
+            }
+
+            entries[0].days.forEach(dayEntry => {
+                dayEntry.details.forEach(entry => {
+                    const row = tableBody.insertRow();
+                    row.insertCell().textContent = entry.date; 
+                    row.insertCell().textContent = entry.startTime;
+                    row.insertCell().textContent = entry.endTime;
+                    row.insertCell().textContent = entry.breakTime;
+                    row.insertCell().textContent = entry.workHours.toFixed(2);
+                    row.insertCell().textContent = entry.project;
+                    row.insertCell().textContent = entry.extraHoursReason || '-';
+                });
+            });
+        }
+
+        function showNotEnteredTimesheetUsers() {
+            const year = document.getElementById('adminYearSelect').value;
+            const month = document.getElementById('adminMonthSelect').value;
+
+            fetch(`/api/admin/users`)
+                .then(response => response.json())
+                .then(allUsers => {
+                    fetch(`/api/admin/timesheet/entries/monthly?year=${year}&month=${month}`)
+                        .then(response => response.json())
+                        .then(timesheetEntries => {
+                            const usersWithEntries = timesheetEntries.map(entry => entry.userEmail);
+                            const usersWithoutEntries = allUsers.filter(user => !usersWithEntries.includes(user.Mail));
+
+                            displayAdminTimesheetEntries(usersWithoutEntries.map(user => ({
+                                userEmail: user.Mail,
+                                days: []
+                            })));
+                        });
+                })
+                .catch(error => {
+                    console.error('Error fetching data for "Not Entered" filter:', error);
+                });
+        }
+
+        function showLessThanEightHours() {
+            const year = document.getElementById('adminYearSelect').value;
+            const month = document.getElementById('adminMonthSelect').value;
+            const selectedUser = document.getElementById('adminUserSelect').value;
+
+            let url = `/api/admin/timesheet/entries/monthly?year=${year}&month=${month}`;
+            if (selectedUser) {
+                url += `&userMail=${selectedUser}`;
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(entries => {
+                    const filteredEntries = entries.map(userEntry => ({
+                        ...userEntry,
+                        days: userEntry.days.filter(dayEntry => dayEntry.totalHours < 8)
+                    }));
+                    if (selectedUser) {
+                        displayAdminIndividualTimesheetEntries(filteredEntries);
+                    } else {
+                        displayAdminTimesheetEntries(filteredEntries);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching timesheet entries:', error);
+                });
+        }
+
+        function showMoreThanEightHours() {
+            const year = document.getElementById('adminYearSelect').value;
+            const month = document.getElementById('adminMonthSelect').value;
+            const selectedUser = document.getElementById('adminUserSelect').value;
+
+            let url = `/api/admin/timesheet/entries/monthly?year=${year}&month=${month}`;
+            if (selectedUser) {
+                url += `&userMail=${selectedUser}`;
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(entries => {
+                    const filteredEntries = entries.map(userEntry => ({
+                        ...userEntry,
+                        days: userEntry.days.filter(dayEntry => dayEntry.totalHours > 8)
+                    }));
+                    if (selectedUser) {
+                        displayAdminIndividualTimesheetEntries(filteredEntries);
+                    } else {
+                        displayAdminTimesheetEntries(filteredEntries);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching timesheet entries:', error);
+                });
+        }
+
+        function isValidFinancialYear(year) {
+            return /^\d{4}-\d{4}$/.test(year);
+        }
+
+        function exportToExcel() {
+            const year = document.getElementById('adminYearSelect').value;
+            const month = document.getElementById('adminMonthSelect').value;
+
+            const url = `/api/admin/timesheet/export?year=${year}&month=${month}`;
+
+            fetch(url)
+                .then(response => {
+                    if (response.ok) return response.blob();
+                    throw new Error('Network response was not ok.');
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `timesheet_data_${year}${month ? `_${month}` : ''}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(error => {
+                    console.error('Error exporting to Excel:', error);
+                    alert('An error occurred while exporting the data to Excel. Please try again.');
+                });
+        }
+
+        // Call this when the page loads or after adding/deleting a financial year
+        fetchAndDisplayFinancialYears(); 
+
+        // Event Listener for Tab Changes 
+        const allUsersViewTab = document.getElementById('allUsersView-tab');
+        const individualUserViewTab = document.getElementById('individualUserView-tab');
+        const adminUserSelect = document.getElementById('adminUserSelect');
+
+        // Function to show/hide tables based on tab selection
+        function toggleAdminTimesheetView(selectedTab) {
+            if (selectedTab === 'allUsersView') {
+                document.getElementById('allUsersView').classList.add('active', 'show'); 
+                document.getElementById('individualUserView').classList.remove('active', 'show'); 
+            } else if (selectedTab === 'individualUserView') {
+                document.getElementById('allUsersView').classList.remove('active', 'show');
+                document.getElementById('individualUserView').classList.add('active', 'show');
+            }
+        }
+
+        allUsersViewTab.addEventListener('click', () => {
+            toggleAdminTimesheetView('allUsersView');
+            adminUserSelect.value = ''; // Reset user selection
+            fetchAdminTimesheetEntries();
+        });
+
+        individualUserViewTab.addEventListener('click', () => {
+            toggleAdminTimesheetView('individualUserView');
+            fetchAdminTimesheetEntries();
+        });
+
+    </script>
+</body>
+</html>
