@@ -593,5 +593,5 @@ app.get('/api/admin/timesheet/export', async (req, res) => {
 // ... other routes 
 
 // Start the server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
