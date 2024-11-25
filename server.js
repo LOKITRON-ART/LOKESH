@@ -10,6 +10,10 @@ dotenv.config();
 
 const app = express();
 
+app.get('/', (req, res) => {
+    res.redirect('/login');
+});
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
